@@ -102,9 +102,9 @@ jobs:
         run: |
           git config user.name GitHub
           git config user.email noreply@github.com
-          git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git
+          git remote set-url origin https://x-access-token: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@github.com/${GITHUB_REPOSITORY}.git
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: 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
       -
         name: Release
         if: success()
@@ -113,7 +113,7 @@ jobs:
             -Prelease.useAutomaticVersion=true \
             -Prelease.releaseVersion=${{ needs.prep.outputs.version }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: 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
       -
         name: Archive artifact
         if: success()
@@ -132,63 +132,4 @@ jobs:
           files: |
             build/libs/*.jar
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  sonar:
-    needs: prep
-    runs-on: ubuntu-latest
-    steps:
-      -
-        name: Checkout
-        uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-      -
-        name: Set up Java
-        uses: actions/setup-java@v1
-        with:
-          java-version: 11
-          java-package: jdk
-      -
-        name: Cache deps
-        uses: actions/cache@v2
-        with:
-          path: ~/.gradle/caches
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-      -
-        name: Sonar
-        if: ${{ env.SONAR_TOKEN != null }}
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            ./gradlew sonarqube \
-              -Dsonar.pullrequest.provider=github \
-              -Dsonar.pullrequest.github.repository=${{ github.repository }} \
-              -Dsonar.host.url=https://sonarcloud.io \
-              -Dsonar.organization=${SONAR_ORG_KEY} \
-              -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
-              -Dsonar.pullrequest.key=${{ github.event.number }} \
-              -Dsonar.pullrequest.base=${{ github.base_ref }}
-          elif [ "${{ needs.prep.outputs.release }}" = 'true' ]; then
-            ./gradlew sonarqube \
-              -Dsonar.pullrequest.provider=github \
-              -Dsonar.pullrequest.github.repository=${{ github.repository }} \
-              -Dsonar.host.url=https://sonarcloud.io \
-              -Dsonar.organization=${SONAR_ORG_KEY} \
-              -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
-              -Dsonar.projectVersion=${{ needs.prep.outputs.version }}
-          else
-            ./gradlew sonarqube \
-              -Dsonar.pullrequest.provider=github \
-              -Dsonar.pullrequest.github.repository=${{ github.repository }} \
-              -Dsonar.host.url=https://sonarcloud.io \
-              -Dsonar.organization=${SONAR_ORG_KEY} \
-              -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
-              -Dsonar.branch.name=${GITHUB_REF##*/}
-          fi
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_ORG_KEY: ${{ secrets.SONAR_ORG_KEY }}
-          SONAR_PROJECT_KEY: ${{ secrets.SONAR_PROJECT_KEY }}
+          GITHUB_TOKEN: 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
