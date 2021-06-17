@@ -1,0 +1,139 @@
+/*
+ * Copyright (C) 2020 Michael Clarke
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ *
+ */
+plugins {
+    id('java')
+    id('jacoco')
+    id('org.sonarqube') version('2.8')
+    id('info.solidsoft.pitest') version('1.4.0')
+    id('com.github.johnrengelman.shadow') version('5.1.0')
+    id('net.researchgate.release') version('2.6.0')
+}
+
+group 'com.sonarsource.sonarqube.plugin'
+
+repositories {
+    mavenCentral()
+    maven {
+        url 'https://dl.bintray.com/americanexpress/maven/'
+    }
+    ivy {
+        url 'https://binaries.sonarsource.com/'
+        patternLayout({a ->
+            artifact '/Distribution/[module]/[module]-[revision].[ext]'
+        })
+    }
+}
+
+def sonarqubeVersion = '8.5.0.37579'
+def sonarqubeLibDir = "${projectDir}/sonarqube-lib"
+def sonarLibraries = "${sonarqubeLibDir}/sonarqube-${sonarqubeVersion}/lib"
+
+sourceCompatibility = JavaVersion.VERSION_1_8
+targetCompatibility = JavaVersion.VERSION_1_8
+configurations {
+    zip
+}
+
+compileJava {
+    options.compilerArgs += '-proc:none'
+}
+
+
+dependencies {
+    compileOnly fileTree(dir: sonarLibraries, include: '**/*.jar', exclude: 'extensions/*.jar')
+    testCompile fileTree(dir: sonarLibraries, include: '**/*.jar', exclude: 'extensions/*.jar')
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+    testCompile group: 'org.mockito', name: 'mockito-core', version: '3.1.0'
+    testCompile group: 'org.assertj', name: 'assertj-core', version: '3.13.2'
+    testCompile group: 'com.github.tomakehurst', name: 'wiremock', version: '2.24.1'
+    zip "sonarqube:sonarqube:${sonarqubeVersion}@zip"
+    compile 'org.bouncycastle:bcpkix-jdk15on:1.62'
+    compile('io.aexp.nodes.graphql:nodes:0.5.0') {
+        exclude group: 'com.fasterxml.jackson.core'
+    }
+    compileOnly 'com.google.code.findbugs:jsr305:3.0.2'
+}
+
+
+project.afterEvaluate {
+    if (file("${sonarLibraries}").exists()) {
+        return
+    }
+    println 'Extracting SonarQube libraries (this may take a while)...'
+    configurations.zip.resolvedConfiguration.resolvedArtifacts.each { artifact ->
+        copy {
+            from zipTree(artifact.getFile())
+            into "${sonarqubeLibDir}"
+        }
+    }
+}
+
+jar {
+    manifest {
+        attributes 'Plugin-Description': 'Enables branch and pull request analysis in SonarQube Community Edition, without having to upgrade to Developer Edition',
+          'SonarLint-Supported': false,
+          'Plugin-Homepage': 'https://github.com/mc1arke/sonarqube-community-branch-plugin',
+          'Plugin-License': 'GNU LGPL 3',
+          'Plugin-Version': "${project.version}",
+          'Plugin-Organization': 'Michael Clarke',
+          'Sonar-Version': "${sonarqubeVersion}",
+          'Plugin-IssueTrackerUrl': 'https://github.com/mc1arke/sonarqube-community-branch-plugin/issues',
+          'Plugin-Key': 'communityBranchPlugin',
+          'Plugin-Class': 'com.sonarsource.sonarqube.plugin.CommunityBranchPluginBootstrap',
+          'Plugin-Name': 'Community Branch Plugin'
+    }
+}
+
+release {
+    git {
+        requireBranch = ''
+        commitVersionFileOnly = true
+    }
+}
+
+tasks.jar.configure {
+    classifier = 'nodeps'
+    enabled = false
+}
+
+tasks.shadowJar.configure {
+    classifier = null
+}
+
+tasks.withType(JavaCompile) {
+    options.compilerArgs << '-Xlint:unchecked'
+    options.deprecation = true
+}
+
+assemble.dependsOn('shadowJar')
+
+pitest {
+    timestampedReports = false
+    avoidCallsTo = ['org.sonar.api.utils.log.Logger']
+}
+
+jacocoTestReport {
+    reports {
+        xml.enabled true
+    }
+}
+
+plugins.withType(JacocoPlugin) {
+    tasks["test"].finalizedBy 'jacocoTestReport'
+}
