@@ -29,9 +29,6 @@ group 'com.sonarsource.sonarqube.plugin'
 
 repositories {
     mavenCentral()
-    maven {
-        url 'https://dl.bintray.com/americanexpress/maven/'
-    }
     ivy {
         url 'https://binaries.sonarsource.com/'
         patternLayout({a ->
