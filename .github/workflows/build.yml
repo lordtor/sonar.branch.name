@@ -70,9 +70,7 @@ jobs:
         if: success()
         run: |
           chmod +x gradlew
-          ./gradlew clean release \
-            -Prelease.useAutomaticVersion=true \
-            -Prelease.releaseVersion=${{ needs.prep.outputs.version }}
+          ./gradlew clean build
         env:
           GITHUB_TOKEN: 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
       -
