@@ -64,6 +64,7 @@ jobs:
       -
         name: Build
         run: |
+          chmod +x gradlew \
           ./gradlew clean build
       -
         name: Archive artifact
@@ -109,6 +110,7 @@ jobs:
         name: Release
         if: success()
         run: |
+          chmod +x gradlew
           ./gradlew clean release \
             -Prelease.useAutomaticVersion=true \
             -Prelease.releaseVersion=${{ needs.prep.outputs.version }}
